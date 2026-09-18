@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UPI PayFlow — Dynamic UPI QR Code & Payment Link Studio</title>
+  <meta name="description" content="Instant scannable UPI QR code generator for merchants, freelancers, and individuals. 2-step flow with payment details and instant scannable QRs.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7BoBhLKzSZsCHVM4yjmLXYVb8445iLTH6GEvqyCDXIgfccaupupjypgN15KGOmKthP5lCZo6pZnTw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 6V18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 9.5L17 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M17 9.5L7 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">UPI <span class="gradient-text">PayFlow</span></h1>
+            <p class="brand-tagline">Dynamic QR Code & Payment Studio</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div id="savedProfileBadge" class="saved-profile-badge hidden" title="Saved Merchant Profile Active">
+            <span class="pulse-dot"></span>
+            <span id="savedProfileText">Profile Active</span>
+            <button id="clearProfileBtn" class="icon-btn-sm" title="Clear Saved Profile">✕</button>
+          </div>
+
+          <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Theme">
+            <span class="theme-icon sun-icon">☀️</span>
+            <span class="theme-icon moon-icon">🌙</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Step Progress Stepper Bar -->
+    <div class="stepper-container">
+      <div id="step1Indicator" class="step-pill active">
+        <span class="step-number">1</span>
+        <span class="step-label">Payment Details</span>
+      </div>
+      <div class="step-line"></div>
+      <div id="step2Indicator" class="step-pill">
+        <span class="step-number">2</span>
+        <span class="step-label">Scannable QR(s) &amp; Pay</span>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+
+      <!-- PAGE / STEP 1: PAYMENT DETAILS FORM -->
+      <div id="step1View" class="step-view">
+        <section class="configurator-card glass-panel step1-card">
+          <div class="card-header">
+            <h2>Enter Payment Details</h2>
+            <p>Fill in payee UPI ID and amount. Amounts &gt; ₹2,000 automatically generate all split ₹1,999 QRs!</p>
+          </div>
+
+          <form id="upiForm" onsubmit="return false;">
+            <!-- UPI VPA ID -->
+            <div class="form-group">
+              <label for="upiId">
+                Payee UPI ID (VPA) <span class="required">*</span>
+                <span class="tooltip-icon" title="Standard UPI ID format: username@bank or mobile@paytm">ℹ️</span>
+              </label>
+              <div class="input-wrapper">
+                <input type="text" id="upiId" placeholder="e.g. merchant@okicici or 9876543210@paytm" autocomplete="off" required>
+                <span id="vpaValidation" class="validation-indicator"></span>
+              </div>
+              <span class="input-hint">Formats: user@upi, name@okaxis, 9876543210@ybl</span>
+            </div>
+
+            <!-- Payee Name -->
+            <div class="form-group">
+              <label for="payeeName">
+                Payee / Business Name <span class="required">*</span>
+              </label>
+              <div class="input-wrapper">
+                <input type="text" id="payeeName" placeholder="e.g. Sharma Grocery Store or John Doe" autocomplete="off" required>
+              </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="form-group">
+              <label for="amount">
+                Amount (₹ INR)
+                <span class="optional-tag">Auto-splits if &gt; ₹2,000</span>
+              </label>
+              <div class="input-wrapper amount-wrapper">
+                <span class="currency-symbol">₹</span>
+                <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" max="100000" autocomplete="off">
+              </div>
+
+              <!-- Quick Presets -->
+              <div class="preset-chips">
+                <span class="preset-label">Quick:</span>
+                <button type="button" class="chip" data-amount="500">₹500</button>
+                <button type="button" class="chip" data-amount="1999">₹1,999</button>
+                <button type="button" class="chip" data-amount="3000">₹3,000</button>
+                <button type="button" class="chip" data-amount="5000">₹5,000</button>
+                <button type="button" class="chip" data-amount="10000">₹10,000</button>
+                <button type="button" class="chip chip-clear" id="clearAmountBtn">Clear</button>
+              </div>
+            </div>
+
+            <!-- Transaction Remark / Note -->
+            <div class="form-group">
+              <label for="txnNote">
+                Transaction Note / Remarks
+              </label>
+              <div class="input-wrapper">
+                <input type="text" id="txnNote" placeholder="e.g. Order #4092 or Services" maxlength="50" autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Customization Accordion -->
+            <details class="customization-accordion">
+              <summary class="accordion-header">
+                <span>🎨 Customize QR Styling & Options</span>
+                <span class="chevron">▼</span>
+              </summary>
+              <div class="accordion-content">
+                <div class="form-group">
+                  <label>QR Dot Color</label>
+                  <div class="color-palette" id="colorPalette">
+                    <button type="button" class="color-btn active" data-color="#0F172A" style="background:#0F172A" title="Classic Dark Slate"></button>
+                    <button type="button" class="color-btn" data-color="#4F46E5" style="background:#4F46E5" title="Electric Indigo"></button>
+                    <button type="button" class="color-btn" data-color="#0284C7" style="background:#0284C7" title="Cyan Spark"></button>
+                    <button type="button" class="color-btn" data-color="#7C3AED" style="background:#7C3AED" title="Deep Purple"></button>
+                    <button type="button" class="color-btn" data-color="#059669" style="background:#059669" title="Emerald Green"></button>
+                    <button type="button" class="color-btn" data-color="#DC2626" style="background:#DC2626" title="Crimson Red"></button>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group half">
+                    <label for="qrSize">QR Quality / Size</label>
+                    <select id="qrSize">
+                      <option value="250">Standard (250px)</option>
+                      <option value="350" selected>High (350px)</option>
+                      <option value="500">Ultra Print (500px)</option>
+                    </select>
+                  </div>
+                  <div class="form-group half">
+                    <label for="showCenterLogo">UPI Logo Badge</label>
+                    <div class="toggle-switch-wrapper">
+                      <input type="checkbox" id="showCenterLogo" checked>
+                      <label for="showCenterLogo" class="toggle-slider"></label>
+                      <span class="toggle-text">Show Center Logo</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <!-- Step 1 Main Action Button -->
+            <div class="submit-action-container">
+              <button type="button" id="generateQrBtn" class="btn btn-primary btn-large-submit">
+                <span>⚡ Generate Payment QR Code(s)</span>
+                <span class="arrow-icon">➔</span>
+              </button>
+            </div>
+
+            <!-- Profile Actions -->
+            <div class="form-actions-secondary">
+              <button type="button" id="saveMerchantBtn" class="btn btn-secondary">
+                <span class="btn-icon">💾</span> Save Merchant Profile
+              </button>
+              <button type="button" id="resetFormBtn" class="btn btn-ghost">
+                Reset Form
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <!-- PAGE / STEP 2: SCANNABLE QR(S) RESULTS PAGE -->
+      <div id="step2View" class="step-view hidden">
+        <section class="step2-wrapper">
+          <!-- Back & Navigation Bar -->
+          <div class="step2-nav-bar glass-panel">
+            <button id="backToEditBtn" class="btn btn-secondary">
+              <span>←</span> Edit Payment Details
+            </button>
+            <div class="step2-status-tag">
+              <span class="status-pulse"></span> Ready for Scanning
+            </div>
+          </div>
+
+          <!-- SINGLE QR PREVIEW CARD (Amount <= ₹2,000) -->
+          <div id="singlePreviewCard" class="preview-card glass-panel highlight-glow">
+            <div class="preview-card-header">
+              <div class="payee-info">
+                <span class="payee-badge">UPI PAYEE</span>
+                <h3 id="previewPayeeName">Your Name / Business</h3>
+                <div class="vpa-display">
+                  <span id="previewVpa">username@upi</span>
+                  <button id="copyVpaBtn" class="copy-vpa-btn" title="Copy VPA">📋</button>
+                </div>
+              </div>
+              <div class="upi-brand-logo">
+                <span class="upi-chip-tag">BHIM UPI</span>
+              </div>
+            </div>
+
+            <!-- Amount Header -->
+            <div class="amount-display-container">
+              <span class="amount-label">AMOUNT PAYABLE</span>
+              <div id="previewAmount" class="preview-amount-val">
+                <span class="curr-sym">₹</span> <span class="amt-num">0.00</span>
+              </div>
+              <div id="previewNote" class="preview-note-badge hidden">
+                📝 <span id="previewNoteText"></span>
+              </div>
+            </div>
+
+            <!-- QR Container -->
+            <div class="qr-box-wrapper">
+              <div id="qrContainer" class="qr-container">
+                <div id="qrCodeOutput"></div>
+                <div id="qrCenterLogo" class="qr-center-logo">
+                  <div class="upi-logo-icon">UPI</div>
+                </div>
+              </div>
+              <div class="scan-instruction">
+                <span class="scan-pulse"></span> Scan with any UPI App (GPay, PhonePe, Paytm, BHIM)
+              </div>
+            </div>
+
+            <!-- Action Buttons Grid -->
+            <div class="preview-actions">
+              <button id="downloadQrBtn" class="btn btn-primary btn-full">
+                <span>📥</span> Download QR Code (PNG)
+              </button>
+              <div class="action-btn-row">
+                <button id="copyLinkBtn" class="btn btn-secondary">
+                  <span>🔗</span> Copy Payment Link
+                </button>
+                <button id="printPosterBtn" class="btn btn-secondary">
+                  <span>🖨️</span> Print Shop Poster
+                </button>
+              </div>
+              <button id="shareWebBtn" class="btn btn-ghost btn-full">
+                <span>📱</span> Share Payment Link
+              </button>
+            </div>
+
+            <!-- Direct App Launchers -->
+            <div class="app-launchers">
+              <span class="launchers-title">Pay directly via App:</span>
+              <div class="app-buttons-grid">
+                <a id="gpayBtn" class="app-btn gpay" target="_blank" rel="noopener">
+                  <span class="app-icon">🔵</span> GPay
+                </a>
+                <a id="phonepeBtn" class="app-btn phonepe" target="_blank" rel="noopener">
+                  <span class="app-icon">🟣</span> PhonePe
+                </a>
+                <a id="paytmBtn" class="app-btn paytm" target="_blank" rel="noopener">
+                  <span class="app-icon">🔷</span> Paytm
+                </a>
+                <a id="bhimBtn" class="app-btn bhim" target="_blank" rel="noopener">
+                  <span class="app-icon">🟧</span> BHIM
+                </a>
+                <a id="credBtn" class="app-btn cred" target="_blank" rel="noopener">
+                  <span class="app-icon">⚫</span> Cred
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- MULTI QR SIMULTANEOUS VIEW CONTAINER (Amount > ₹2,000) -->
+          <div id="multiPreviewContainer" class="multi-preview-container hidden">
+            <!-- Multi-QR Summary Header Card -->
+            <div class="glass-panel multi-summary-card">
+              <div class="multi-summary-header">
+                <span class="split-live-badge">⚡ ALL QR CODES GENERATED</span>
+                <h2>Total Amount: <span id="multiTotalAmount" class="gradient-text">₹ 0.00</span></h2>
+                <p id="multiSplitDesc">Amount exceeds ₹2,000 limit. All split QRs are displayed below at the same time for immediate scanning!</p>
+              </div>
+
+              <!-- Batch Action Buttons -->
+              <div class="multi-global-actions">
+                <button id="downloadAllBtn" class="btn btn-primary">
+                  <span>📦</span> Download All <span id="downloadAllCount">X</span> QRs (PNG)
+                </button>
+                <button id="printMultiPosterBtn" class="btn btn-secondary">
+                  <span>🖨️</span> Print Multi-QR Standee Poster
+                </button>
+              </div>
+            </div>
+
+            <!-- Grid of All QR Cards -->
+            <div id="multiQrCardsGrid" class="multi-qr-cards-grid">
+              <!-- Dynamically populated in JS -->
+            </div>
+          </div>
+
+          <!-- Bottom Action Bar -->
+          <div class="step2-bottom-bar">
+            <button id="createAnotherBtn" class="btn btn-secondary btn-full">
+              <span>←</span> Create Another Payment / Edit Details
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- History Log Section -->
+      <section class="history-section glass-panel">
+        <div class="history-header">
+          <div class="history-title">
+            <h2>📜 Recent QR Generation History</h2>
+            <span id="historyCountBadge" class="count-badge">0</span>
+          </div>
+          <button id="clearHistoryBtn" class="btn btn-sm btn-ghost">Clear History</button>
+        </div>
+        <div id="historyList" class="history-grid">
+          <div class="history-empty">
+            No recent generated QRs yet. Configure details above to automatically save history!
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>© 2026 UPI PayFlow • Dynamic Multi-QR Payment Studio • NPCI Compliant</p>
+      <div class="supported-apps-strip">
+        <span>Supported: Google Pay • PhonePe • Paytm • BHIM • Cred • Amazon Pay • WhatsApp Pay • All Bank Apps</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Printable Merchant Standee Poster Modal -->
+  <div id="printModal" class="modal-overlay hidden">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <h3>🖨️ Shopkeeper QR Standee Poster Preview</h3>
+        <button id="closePrintModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Printable Area -->
+        <div id="printablePoster" class="poster-standee">
+          <div class="poster-top-header">
+            <div class="poster-brand-logo">BHIM UPI</div>
+            <p class="poster-scan-text">ACCEPT PAYMENTS HERE</p>
+          </div>
+
+          <div class="poster-merchant-details">
+            <h2 id="posterMerchantName">Sharma Store</h2>
+            <p id="posterVpa" class="poster-vpa">sharma@okicici</p>
+          </div>
+
+          <div id="posterSingleQrView">
+            <div class="poster-qr-container">
+              <div id="posterQrOutput"></div>
+            </div>
+          </div>
+
+          <!-- Multi-QR Poster Grid View (Shows when split active) -->
+          <div id="posterMultiQrView" class="poster-multi-grid hidden">
+            <!-- Grid of split QRs populated dynamically -->
+          </div>
+
+          <div id="posterAmountContainer" class="poster-amount-tag">
+            <span>Total Payable Amount: </span>
+            <strong id="posterAmountVal">₹ 0.00</strong>
+          </div>
+
+          <div class="poster-footer">
+            <p class="poster-instruction">Scan &amp; Pay using any UPI App</p>
+            <div class="poster-supported-logos">
+              <span>Google Pay</span> • <span>PhonePe</span> • <span>Paytm</span> • <span>BHIM</span> • <span>Cred</span>
+            </div>
+            <p class="poster-powered">Powered by UPI PayFlow</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="triggerPrintBtn" class="btn btn-primary">
+          <span>🖨️</span> Print Poster Now
+        </button>
+        <button id="cancelPrintBtn" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
