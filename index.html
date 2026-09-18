@@ -46,8 +46,18 @@
       </div>
     </header>
 
-    <!-- Step Progress Stepper Bar -->
-    <div class="stepper-container">
+    <!-- Mode Switcher Tabs -->
+    <nav class="app-mode-nav">
+      <button id="modeQrStudioBtn" class="mode-tab active">
+        <span>⚡ QR Code &amp; Link Studio</span>
+      </button>
+      <button id="modeCalcBtn" class="mode-tab">
+        <span>🧮 UPI Charge Calculator</span>
+      </button>
+    </nav>
+
+    <!-- Step Progress Stepper Bar (Visible in QR Studio Mode) -->
+    <div id="qrStepperContainer" class="stepper-container">
       <div id="step1Indicator" class="step-pill active">
         <span class="step-number">1</span>
         <span class="step-label">Payment Details</span>
@@ -352,6 +362,122 @@
             <button id="createAnotherBtn" class="btn btn-secondary btn-full">
               <span>←</span> Create Another Payment / Edit Details
             </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- PAGE / CALCULATOR VIEW: UPI CHARGE & INTERCHANGE FEE CALCULATOR -->
+      <div id="calcView" class="step-view hidden">
+        <section class="configurator-card glass-panel calc-card">
+          <div class="card-header">
+            <h2>🧮 UPI Charge &amp; Interchange Fee Calculator</h2>
+            <p>Calculate exact customer charges, merchant MDR / interchange rates, and net payouts according to official NPCI guidelines.</p>
+          </div>
+
+          <div class="calc-grid-layout">
+            <!-- Calculator Inputs Form -->
+            <form id="calcForm" class="calc-inputs-form" onsubmit="return false;">
+              <!-- Payment Amount -->
+              <div class="form-group">
+                <label for="calcAmount">
+                  Payment Amount (₹) <span class="required">*</span>
+                </label>
+                <div class="input-wrapper amount-wrapper">
+                  <span class="currency-symbol">₹</span>
+                  <input type="number" id="calcAmount" value="5000" step="1" min="1" max="100000" autocomplete="off" required>
+                </div>
+                <div class="preset-chips calc-preset-chips">
+                  <button type="button" class="chip calc-chip" data-amt="500">₹500</button>
+                  <button type="button" class="chip calc-chip" data-amt="2000">₹2,000</button>
+                  <button type="button" class="chip calc-chip active" data-amt="5000">₹5,000</button>
+                  <button type="button" class="chip calc-chip" data-amt="10000">₹10,000</button>
+                  <button type="button" class="chip calc-chip" data-amt="50000">₹50,000</button>
+                </div>
+              </div>
+
+              <!-- Payment Instrument / Source -->
+              <div class="form-group">
+                <label for="calcSource">
+                  Payment Source / Instrument <span class="required">*</span>
+                </label>
+                <select id="calcSource">
+                  <option value="bank" selected>Bank Account (Standard UPI / P2P / P2M)</option>
+                  <option value="rupay">RuPay Credit Card on UPI</option>
+                  <option value="ppi">Prepaid Wallet (PPI - Paytm, PhonePe, Mobikwik)</option>
+                </select>
+              </div>
+
+              <!-- Merchant Category -->
+              <div class="form-group">
+                <label for="calcMerchant">
+                  Merchant Type / Category <span class="required">*</span>
+                </label>
+                <select id="calcMerchant">
+                  <option value="small" selected>Small Offline Merchant (Turnover &lt; ₹20 Lakhs)</option>
+                  <option value="large_retail">Large Retail &amp; Commercial Merchant</option>
+                  <option value="fuel">Fuel Stations (Petrol / Diesel / CNG)</option>
+                  <option value="telecom_utility">Telecom, Utilities &amp; DTH</option>
+                  <option value="edu_govt">Education, Insurance &amp; Govt Services</option>
+                </select>
+              </div>
+            </form>
+
+            <!-- Real-time Charge Calculation Results -->
+            <div class="calc-results-card glass-panel">
+              <h3 class="results-title">📊 Fee &amp; Payout Summary</h3>
+
+              <div class="results-table">
+                <div class="result-row">
+                  <span class="row-label">Transaction Amount</span>
+                  <span id="resTxnAmount" class="row-val">₹ 5,000.00</span>
+                </div>
+
+                <div class="result-row highlight-green">
+                  <span class="row-label">
+                    Applicable Customer Charge*
+                    <span class="tag-free">100% FREE</span>
+                  </span>
+                  <span id="resCustomerCharge" class="row-val green-text">₹ 0.00</span>
+                </div>
+
+                <div class="result-row">
+                  <span class="row-label">Customer Pays</span>
+                  <span id="resCustomerPays" class="row-val bold-text">₹ 5,000.00</span>
+                </div>
+
+                <div class="divider-line"></div>
+
+                <div class="result-row">
+                  <span class="row-label">
+                    Merchant Interchange / MDR Fee
+                    <span id="resMdrRateTag" class="tag-rate">0.00%</span>
+                  </span>
+                  <span id="resMdrFee" class="row-val">₹ 0.00</span>
+                </div>
+
+                <div class="result-row">
+                  <span class="row-label">18% GST on Merchant Fee</span>
+                  <span id="resGstFee" class="row-val">₹ 0.00</span>
+                </div>
+
+                <div class="result-row highlight-cyan">
+                  <span class="row-label">Net Merchant Payout</span>
+                  <span id="resNetPayout" class="row-val cyan-text bold-text">₹ 5,000.00</span>
+                </div>
+              </div>
+
+              <!-- NPCI Rule Explanation Badge -->
+              <div class="npci-rule-box">
+                <span class="npci-badge">📜 NPCI Regulation</span>
+                <p id="npciRuleDesc" class="npci-rule-text">Zero charges for P2P and Small Merchants. Standard UPI payments from bank accounts are 100% free for both customer and payee.</p>
+              </div>
+
+              <!-- Transfer Amount to QR Studio Action -->
+              <button type="button" id="useInQrBtn" class="btn btn-primary btn-full">
+                <span>⚡ Generate QR Code for ₹<span id="useInQrAmtText">5,000</span></span>
+                <span>➔</span>
+              </button>
+            </div>
           </div>
         </section>
       </div>

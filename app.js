@@ -104,7 +104,31 @@ const elements = {
   cancelPrintBtn: document.getElementById('cancelPrintBtn'),
   
   // Toast
-  toastContainer: document.getElementById('toastContainer')
+  toastContainer: document.getElementById('toastContainer'),
+
+  // App Mode Switcher & Stepper
+  modeQrStudioBtn: document.getElementById('modeQrStudioBtn'),
+  modeCalcBtn: document.getElementById('modeCalcBtn'),
+  qrStepperContainer: document.getElementById('qrStepperContainer'),
+  calcView: document.getElementById('calcView'),
+
+  // Calculator Form Elements
+  calcForm: document.getElementById('calcForm'),
+  calcAmount: document.getElementById('calcAmount'),
+  calcSource: document.getElementById('calcSource'),
+  calcMerchant: document.getElementById('calcMerchant'),
+  
+  // Calculator Result Elements
+  resTxnAmount: document.getElementById('resTxnAmount'),
+  resCustomerCharge: document.getElementById('resCustomerCharge'),
+  resCustomerPays: document.getElementById('resCustomerPays'),
+  resMdrRateTag: document.getElementById('resMdrRateTag'),
+  resMdrFee: document.getElementById('resMdrFee'),
+  resGstFee: document.getElementById('resGstFee'),
+  resNetPayout: document.getElementById('resNetPayout'),
+  npciRuleDesc: document.getElementById('npciRuleDesc'),
+  useInQrBtn: document.getElementById('useInQrBtn'),
+  useInQrAmtText: document.getElementById('useInQrAmtText')
 };
 
 // Currency symbol map helper
@@ -832,12 +856,153 @@ function setupLiveValidation() {
   });
 }
 
+// Switch App Mode (QR Studio vs Charge Calculator)
+function switchAppMode(mode = 'qr') {
+  if (mode === 'calc') {
+    elements.modeQrStudioBtn.classList.remove('active');
+    elements.modeCalcBtn.classList.add('active');
+    
+    elements.qrStepperContainer.classList.add('hidden');
+    elements.step1View.classList.add('hidden');
+    elements.step2View.classList.add('hidden');
+    elements.calcView.classList.remove('hidden');
+
+    updateCalculatorDisplay();
+  } else {
+    elements.modeCalcBtn.classList.remove('active');
+    elements.modeQrStudioBtn.classList.add('active');
+
+    elements.qrStepperContainer.classList.remove('hidden');
+    elements.calcView.classList.add('hidden');
+    
+    if (state.currentStep === 2) {
+      elements.step1View.classList.add('hidden');
+      elements.step2View.classList.remove('hidden');
+    } else {
+      elements.step1View.classList.remove('hidden');
+      elements.step2View.classList.add('hidden');
+    }
+  }
+}
+
+// UPI Charge & Interchange Fee Calculator Engine
+function calculateUpiFeeDetails(amountVal, sourceVal, merchantVal) {
+  const amount = Math.max(0, parseFloat(amountVal) || 0);
+  const customerCharge = 0; // Customer always pays ₹0 for UPI
+  const customerPays = amount;
+  let mdrRate = 0;
+  let ruleText = '';
+
+  if (sourceVal === 'bank') {
+    mdrRate = 0;
+    ruleText = 'NPCI Guidelines: Zero charges for P2P and Bank-to-Bank P2M transactions. Standard UPI payments from savings/current bank accounts are 100% free for both customer and merchant.';
+  } else if (sourceVal === 'rupay') {
+    if (amount <= 2000 || merchantVal === 'small') {
+      mdrRate = 0;
+      ruleText = 'NPCI Circular: Zero MDR for RuPay Credit Card transactions up to ₹2,000 or for small merchants with turnover < ₹20 Lakhs.';
+    } else {
+      mdrRate = 2.0; // Standard RuPay Credit Card MDR
+      ruleText = 'NPCI Circular: Standard MDR of 2.00% (+18% GST) applies for RuPay Credit Card payments over ₹2,000 at large commercial merchants. Customer charge is ₹0.';
+    }
+  } else if (sourceVal === 'ppi') {
+    if (amount <= 2000 || merchantVal === 'small') {
+      mdrRate = 0;
+      ruleText = 'NPCI Circular: Zero interchange fee for Prepaid Wallet (PPI) transactions up to ₹2,000 or at small offline merchants.';
+    } else {
+      if (merchantVal === 'fuel') {
+        mdrRate = 0.5;
+      } else if (merchantVal === 'telecom_utility' || merchantVal === 'edu_govt') {
+        mdrRate = 0.7;
+      } else {
+        mdrRate = 1.1; // Large retail / commercial
+      }
+      ruleText = `NPCI Circular: ${mdrRate.toFixed(1)}% interchange fee applies to PPI merchant transactions over ₹2,000 (${merchantVal === 'fuel' ? 'Fuel tier' : merchantVal.includes('telecom') ? 'Utilities tier' : 'Retail tier'}). Customer charge is ₹0.`;
+    }
+  }
+
+  const mdrFee = amount * (mdrRate / 100);
+  const gstFee = mdrFee * 0.18;
+  const totalDeduction = mdrFee + gstFee;
+  const netPayout = Math.max(0, amount - totalDeduction);
+
+  return {
+    amount,
+    customerCharge,
+    customerPays,
+    mdrRate,
+    mdrFee,
+    gstFee,
+    netPayout,
+    ruleText
+  };
+}
+
+// Update Calculator Results Card UI
+function updateCalculatorDisplay() {
+  if (!elements.calcAmount) return;
+
+  const amountVal = elements.calcAmount.value;
+  const sourceVal = elements.calcSource.value;
+  const merchantVal = elements.calcMerchant.value;
+
+  const res = calculateUpiFeeDetails(amountVal, sourceVal, merchantVal);
+
+  const fmt = (num) => '₹ ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  elements.resTxnAmount.textContent = fmt(res.amount);
+  elements.resCustomerCharge.textContent = fmt(res.customerCharge);
+  elements.resCustomerPays.textContent = fmt(res.customerPays);
+  elements.resMdrRateTag.textContent = `${res.mdrRate.toFixed(2)}%`;
+  elements.resMdrFee.textContent = fmt(res.mdrFee);
+  elements.resGstFee.textContent = fmt(res.gstFee);
+  elements.resNetPayout.textContent = fmt(res.netPayout);
+  elements.npciRuleDesc.textContent = res.ruleText;
+  elements.useInQrAmtText.textContent = res.amount.toLocaleString('en-IN');
+}
+
+// Setup Calculator Input Event Handlers
+function setupCalculatorEvents() {
+  if (!elements.calcAmount) return;
+
+  const triggerUpdate = () => updateCalculatorDisplay();
+
+  elements.calcAmount.addEventListener('input', triggerUpdate);
+  elements.calcSource.addEventListener('change', triggerUpdate);
+  elements.calcMerchant.addEventListener('change', triggerUpdate);
+
+  document.querySelectorAll('.calc-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.calc-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      elements.calcAmount.value = chip.dataset.amt;
+      updateCalculatorDisplay();
+      playChimeSound('copy');
+    });
+  });
+
+  elements.useInQrBtn.addEventListener('click', () => {
+    const calcAmt = elements.calcAmount.value;
+    elements.amount.value = calcAmt;
+    switchAppMode('qr');
+    goToStep(1);
+    showToast(`Transferred ₹${parseFloat(calcAmt).toLocaleString('en-IN')} to QR Studio!`, '⚡');
+    playChimeSound('success');
+  });
+}
+
 // Initialize Application
 function init() {
   setupThemeToggle();
   setupPresetChips();
   setupCustomization();
   setupLiveValidation();
+  setupCalculatorEvents();
+
+  // Mode Switcher Event Listeners
+  if (elements.modeQrStudioBtn && elements.modeCalcBtn) {
+    elements.modeQrStudioBtn.addEventListener('click', () => switchAppMode('qr'));
+    elements.modeCalcBtn.addEventListener('click', () => switchAppMode('calc'));
+  }
 
   // Load Saved Profile if available
   const saved = checkSavedProfile();
