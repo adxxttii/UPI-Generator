@@ -6,6 +6,8 @@ const state = {
   payeeName: 'Demo Store',
   amount: '3000',
   note: 'Grocery Payment',
+  refId: '',
+  currency: 'INR',
   color: '#0F172A',
   size: 350,
   showLogo: true,
@@ -27,10 +29,15 @@ const elements = {
   upiId: document.getElementById('upiId'),
   payeeName: document.getElementById('payeeName'),
   amount: document.getElementById('amount'),
+  currencySelect: document.getElementById('currencySelect'),
+  currencySymbolDisplay: document.getElementById('currencySymbolDisplay'),
   txnNote: document.getElementById('txnNote'),
+  refId: document.getElementById('refId'),
+  generateRefBtn: document.getElementById('generateRefBtn'),
   vpaValidation: document.getElementById('vpaValidation'),
   colorPalette: document.getElementById('colorPalette'),
-  qrSize: document.getElementById('qrSize'),
+  customQrSlider: document.getElementById('customQrSlider'),
+  qrSizeValDisplay: document.getElementById('qrSizeValDisplay'),
   showCenterLogo: document.getElementById('showCenterLogo'),
   
   // Step 1 Buttons
@@ -66,6 +73,8 @@ const elements = {
   paytmBtn: document.getElementById('paytmBtn'),
   bhimBtn: document.getElementById('bhimBtn'),
   credBtn: document.getElementById('credBtn'),
+  amazonpayBtn: document.getElementById('amazonpayBtn'),
+  whatsappBtn: document.getElementById('whatsappBtn'),
   
   // Step 2 Multi Preview Elements
   multiPreviewContainer: document.getElementById('multiPreviewContainer'),
@@ -98,18 +107,24 @@ const elements = {
   toastContainer: document.getElementById('toastContainer')
 };
 
+// Currency symbol map helper
+function getCurrencySymbol(code = 'INR') {
+  const map = { INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ' };
+  return map[code] || code;
+}
+
 // Regex for VPA Validation
 const VPA_REGEX = /^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9]+$/;
 
 // Calculate Split Parts for Amounts > ₹2,000
-function calculateSplitParts(totalAmount, notePrefix = '') {
+function calculateSplitParts(totalAmount, notePrefix = '', baseRefId = '') {
   const amt = parseFloat(totalAmount);
   if (isNaN(amt) || amt <= 0) {
-    return [{ amount: 0, partNum: 1, totalParts: 1, note: notePrefix }];
+    return [{ amount: 0, partNum: 1, totalParts: 1, note: notePrefix, refId: baseRefId }];
   }
   
   if (amt <= 2000) {
-    return [{ amount: amt, partNum: 1, totalParts: 1, note: notePrefix }];
+    return [{ amount: amt, partNum: 1, totalParts: 1, note: notePrefix, refId: baseRefId }];
   }
 
   const CHUNK_SIZE = 1999;
@@ -121,11 +136,13 @@ function calculateSplitParts(totalAmount, notePrefix = '') {
     const chunkAmt = Math.min(remaining, CHUNK_SIZE);
     const roundedAmt = parseFloat(chunkAmt.toFixed(2));
     const partNote = notePrefix ? `${notePrefix} (Part ${partIndex})` : `Part ${partIndex}`;
+    const partRefId = baseRefId ? `${baseRefId}-${partIndex}` : '';
     
     parts.push({
       amount: roundedAmt,
       partNum: partIndex,
-      note: partNote
+      note: partNote,
+      refId: partRefId
     });
     
     remaining = parseFloat((remaining - roundedAmt).toFixed(2));
@@ -181,12 +198,14 @@ function showToast(message, icon = '✨') {
   }, 3000);
 }
 
-// Build standard UPI URL string
-function buildUpiUrl(vpa, name, amount, note) {
+// Build standard NPCI UPI URL string
+function buildUpiUrl(vpa, name, amount, note, refId = '', currency = 'INR') {
   const cleanVpa = (vpa || '').trim();
   const cleanName = (name || '').trim();
   const cleanAmount = parseFloat(amount);
   const cleanNote = (note || '').trim();
+  const cleanRefId = (refId || '').trim();
+  const cleanCurrency = (currency || 'INR').trim();
   
   let params = new URLSearchParams();
   params.append('pa', cleanVpa);
@@ -194,8 +213,9 @@ function buildUpiUrl(vpa, name, amount, note) {
   if (!isNaN(cleanAmount) && cleanAmount > 0) {
     params.append('am', cleanAmount.toFixed(2));
   }
-  params.append('cu', 'INR');
+  params.append('cu', cleanCurrency);
   if (cleanNote) params.append('tn', cleanNote);
+  if (cleanRefId) params.append('tr', cleanRefId);
   
   return `upi://pay?${params.toString()}`;
 }
@@ -233,10 +253,11 @@ async function renderQrCode(container, text, color = '#0F172A', size = 350) {
 // Render All Split QR Cards Simultaneously for Step 2
 async function renderAllMultiQrCards() {
   elements.multiQrCardsGrid.innerHTML = '';
+  const sym = getCurrencySymbol(state.currency);
 
   for (let i = 0; i < state.parts.length; i++) {
     const part = state.parts[i];
-    const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note);
+    const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note, part.refId, state.currency);
     
     const card = document.createElement('div');
     card.className = 'preview-card glass-panel multi-qr-card';
@@ -258,9 +279,10 @@ async function renderAllMultiQrCards() {
       <div class="amount-display-container">
         <span class="amount-label">PART AMOUNT PAYABLE</span>
         <div class="part-amount-val">
-          <span class="curr-sym">₹</span> ${part.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          <span class="curr-sym">${sym}</span> ${part.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
         </div>
         ${part.note ? `<div class="preview-note-badge">📝 ${part.note}</div>` : ''}
+        ${part.refId ? `<div class="preview-note-badge">🔖 Ref: ${part.refId}</div>` : ''}
       </div>
 
       <div class="qr-box-wrapper">
@@ -290,6 +312,8 @@ async function renderAllMultiQrCards() {
           <a href="${upiUrl}" class="app-btn paytm" target="_blank" rel="noopener">🔷 Paytm</a>
           <a href="${upiUrl}" class="app-btn bhim" target="_blank" rel="noopener">🟧 BHIM</a>
           <a href="${upiUrl}" class="app-btn cred" target="_blank" rel="noopener">⚫ Cred</a>
+          <a href="${upiUrl}" class="app-btn amazonpay" target="_blank" rel="noopener">🟠 Amazon Pay</a>
+          <a href="${upiUrl}" class="app-btn whatsapp" target="_blank" rel="noopener">🟢 WhatsApp</a>
         </div>
       </div>
     `;
@@ -309,16 +333,19 @@ async function updateStep2View() {
   state.vpa = elements.upiId.value.trim();
   state.payeeName = elements.payeeName.value.trim();
   state.amount = elements.amount.value.trim();
+  state.currency = elements.currencySelect.value;
   state.note = elements.txnNote.value.trim();
+  state.refId = elements.refId.value.trim();
 
-  state.parts = calculateSplitParts(state.amount, state.note);
+  state.parts = calculateSplitParts(state.amount, state.note, state.refId);
   const numAmt = parseFloat(state.amount);
+  const sym = getCurrencySymbol(state.currency);
 
   if (state.parts.length > 1) {
     elements.singlePreviewCard.classList.add('hidden');
     elements.multiPreviewContainer.classList.remove('hidden');
 
-    elements.multiTotalAmount.textContent = `₹ ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    elements.multiTotalAmount.textContent = `${sym} ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     elements.multiSplitDesc.textContent = `Total amount exceeds ₹2,000. All ${state.parts.length} split QR codes are displayed below at the same time for immediate scanning!`;
     elements.downloadAllCount.textContent = state.parts.length;
 
@@ -331,21 +358,25 @@ async function updateStep2View() {
     elements.previewVpa.textContent = state.vpa || 'username@upi';
     
     if (!isNaN(numAmt) && numAmt > 0) {
-      elements.previewAmount.innerHTML = `<span class="curr-sym">₹</span> <span class="amt-num">${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
+      elements.previewAmount.innerHTML = `<span class="curr-sym">${sym}</span> <span class="amt-num">${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
     } else {
-      elements.previewAmount.innerHTML = `<span class="curr-sym">₹</span> <span class="amt-num">Open Amount</span>`;
+      elements.previewAmount.innerHTML = `<span class="curr-sym">${sym}</span> <span class="amt-num">Open Amount</span>`;
     }
     
-    if (state.note) {
+    let noteBadgeText = [];
+    if (state.note) noteBadgeText.push(`📝 ${state.note}`);
+    if (state.refId) noteBadgeText.push(`🔖 Ref: ${state.refId}`);
+
+    if (noteBadgeText.length > 0) {
       elements.previewNote.classList.remove('hidden');
-      elements.previewNoteText.textContent = state.note;
+      elements.previewNoteText.textContent = noteBadgeText.join(' • ');
     } else {
       elements.previewNote.classList.add('hidden');
     }
 
     elements.qrCenterLogo.style.display = state.showLogo ? 'flex' : 'none';
 
-    const upiUrl = buildUpiUrl(state.vpa, state.payeeName, state.amount, state.note);
+    const upiUrl = buildUpiUrl(state.vpa, state.payeeName, state.amount, state.note, state.refId, state.currency);
     await renderQrCode(elements.qrCodeOutput, upiUrl, state.color, state.size);
     
     elements.gpayBtn.href = upiUrl;
@@ -353,6 +384,8 @@ async function updateStep2View() {
     elements.paytmBtn.href = upiUrl;
     elements.bhimBtn.href = upiUrl;
     elements.credBtn.href = upiUrl;
+    elements.amazonpayBtn.href = upiUrl;
+    elements.whatsappBtn.href = upiUrl;
   }
 }
 
@@ -417,9 +450,51 @@ function setupCustomization() {
     });
   });
 
-  elements.qrSize.addEventListener('change', (e) => {
-    state.size = parseInt(e.target.value, 10);
+  // Custom QR Size Slider
+  if (elements.customQrSlider) {
+    elements.customQrSlider.addEventListener('input', (e) => {
+      state.size = parseInt(e.target.value, 10);
+      elements.qrSizeValDisplay.textContent = `${state.size} px`;
+      document.querySelectorAll('.size-chip').forEach(c => {
+        c.classList.toggle('active', parseInt(c.dataset.size, 10) === state.size);
+      });
+    });
+  }
+
+  // Size Preset Chips
+  document.querySelectorAll('.size-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.size-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const sz = parseInt(chip.dataset.size, 10);
+      state.size = sz;
+      if (elements.customQrSlider) elements.customQrSlider.value = sz;
+      elements.qrSizeValDisplay.textContent = `${sz} px`;
+      playChimeSound('copy');
+    });
   });
+
+  // Currency Select Change
+  if (elements.currencySelect) {
+    elements.currencySelect.addEventListener('change', (e) => {
+      state.currency = e.target.value;
+      const sym = getCurrencySymbol(state.currency);
+      elements.currencySymbolDisplay.textContent = sym;
+    });
+  }
+
+  // Auto Generate Reference ID Button
+  if (elements.generateRefBtn) {
+    elements.generateRefBtn.addEventListener('click', () => {
+      const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+      const randNum = Math.floor(100000 + Math.random() * 900000);
+      const newRef = `TXN${dateStr}${randNum}`;
+      elements.refId.value = newRef;
+      state.refId = newRef;
+      showToast(`Generated Ref ID: ${newRef}`, '🎲');
+      playChimeSound('copy');
+    });
+  }
 
   elements.showCenterLogo.addEventListener('change', (e) => {
     state.showLogo = e.target.checked;
@@ -471,12 +546,14 @@ function saveToHistory() {
   const name = elements.payeeName.value.trim();
   const amount = elements.amount.value.trim();
   const note = elements.txnNote.value.trim();
+  const refId = elements.refId.value.trim();
+  const currency = elements.currencySelect.value;
   
   if (!vpa || !VPA_REGEX.test(vpa)) return;
   
   let history = JSON.parse(localStorage.getItem('upi_payflow_history') || '[]');
   
-  if (history.length > 0 && history[0].vpa === vpa && history[0].amount === amount && history[0].note === note) {
+  if (history.length > 0 && history[0].vpa === vpa && history[0].amount === amount && history[0].note === note && history[0].refId === refId) {
     return;
   }
   
@@ -485,7 +562,9 @@ function saveToHistory() {
     vpa,
     name,
     amount,
+    currency,
     note,
+    refId,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   };
   
@@ -505,18 +584,22 @@ function renderHistory() {
     return;
   }
   
-  elements.historyList.innerHTML = history.map(item => `
-    <div class="history-item-card" data-id="${item.id}">
-      <div class="history-item-details">
-        <h4>${item.name || 'Unnamed Payee'}</h4>
-        <p class="history-item-vpa">${item.vpa}</p>
-        <span class="history-item-amount">${item.amount ? '₹' + parseFloat(item.amount).toLocaleString('en-IN') : 'Open Amount'}</span>
+  elements.historyList.innerHTML = history.map(item => {
+    const sym = getCurrencySymbol(item.currency || 'INR');
+    return `
+      <div class="history-item-card" data-id="${item.id}">
+        <div class="history-item-details">
+          <h4>${item.name || 'Unnamed Payee'}</h4>
+          <p class="history-item-vpa">${item.vpa}</p>
+          <span class="history-item-amount">${item.amount ? sym + ' ' + parseFloat(item.amount).toLocaleString('en-IN') : 'Open Amount'}</span>
+          ${item.refId ? `<span class="history-item-ref" style="font-size:0.7rem; color:var(--text-muted); display:block;">Ref: ${item.refId}</span>` : ''}
+        </div>
+        <div class="history-item-actions">
+          <button class="btn btn-sm btn-secondary load-history-btn" title="Load Details & Generate QR">🔄 Load</button>
+        </div>
       </div>
-      <div class="history-item-actions">
-        <button class="btn btn-sm btn-secondary load-history-btn" title="Load Details & Generate QR">🔄 Load</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   
   elements.historyList.querySelectorAll('.load-history-btn').forEach((btn, index) => {
     btn.addEventListener('click', () => {
@@ -524,7 +607,12 @@ function renderHistory() {
       elements.upiId.value = item.vpa;
       elements.payeeName.value = item.name;
       elements.amount.value = item.amount;
-      elements.txnNote.value = item.note;
+      if (item.currency && elements.currencySelect) {
+        elements.currencySelect.value = item.currency;
+        elements.currencySymbolDisplay.textContent = getCurrencySymbol(item.currency);
+      }
+      elements.txnNote.value = item.note || '';
+      elements.refId.value = item.refId || '';
       goToStep(2);
       showToast('Loaded details from history & generated QR!', '📋');
     });
@@ -533,11 +621,12 @@ function renderHistory() {
 
 // Download Single Part QR
 async function downloadSinglePartQr(partIndex = 0) {
-  const part = state.parts[partIndex] || { partNum: 1, amount: state.amount, note: state.note };
-  const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note);
+  const part = state.parts[partIndex] || { partNum: 1, amount: state.amount, note: state.note, refId: state.refId };
+  const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note, part.refId, state.currency);
   
   const tempContainer = document.createElement('div');
-  await renderQrCode(tempContainer, upiUrl, state.color, 500);
+  const exportSize = Math.max(state.size, 500); // High res PNG download
+  await renderQrCode(tempContainer, upiUrl, state.color, exportSize);
   const canvas = tempContainer.querySelector('canvas');
 
   if (canvas) {
@@ -585,8 +674,8 @@ async function downloadAllSplitQrs() {
 
 // Copy Single Part Link
 async function copySinglePartLink(partIndex = 0) {
-  const part = state.parts[partIndex] || { amount: state.amount, note: state.note };
-  const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note);
+  const part = state.parts[partIndex] || { amount: state.amount, note: state.note, refId: state.refId };
+  const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note, part.refId, state.currency);
   try {
     await navigator.clipboard.writeText(upiUrl);
     showToast(`Payment Link copied (${state.parts.length > 1 ? 'Part ' + part.partNum : 'Active'})!`, '🔗');
@@ -607,15 +696,40 @@ async function copyVpa() {
   }
 }
 
-// Web Share API
+// Web Share API — QR Image or Link Sharing
 async function sharePaymentQr() {
-  const part = state.parts[0] || { amount: state.amount, note: state.note };
-  const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note);
+  const part = state.parts[0] || { amount: state.amount, note: state.note, refId: state.refId };
+  const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note, part.refId, state.currency);
+  const sym = getCurrencySymbol(state.currency);
+  
+  // Try sharing Canvas PNG image if Web Share API with File blob is supported
+  try {
+    const tempContainer = document.createElement('div');
+    await renderQrCode(tempContainer, upiUrl, state.color, state.size);
+    const canvas = tempContainer.querySelector('canvas');
+    
+    if (canvas && navigator.canShare) {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const file = new File([blob], `UPI_QR_${(state.payeeName || 'Payment').replace(/[^a-zA-Z0-9]/g, '_')}.png`, { type: 'image/png' });
+      
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Pay ${state.payeeName || 'via UPI'}`,
+          text: `Pay ${state.payeeName} ${sym}${state.amount} via UPI`,
+          files: [file]
+        });
+        showToast('Shared QR Code image successfully!', '📱');
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // Fallback to standard URL sharing or clipboard
   if (navigator.share) {
     try {
       await navigator.share({
         title: `Pay ${state.payeeName || 'via UPI'}`,
-        text: `Pay ${state.payeeName} ₹${state.amount} via UPI`,
+        text: `Pay ${state.payeeName} ${sym}${state.amount} via UPI`,
         url: upiUrl
       });
       showToast('Payment link shared successfully!', '📱');
@@ -633,11 +747,12 @@ async function sharePaymentQr() {
 async function openPrintModal() {
   elements.posterMerchantName.textContent = state.payeeName || 'Merchant Store';
   elements.posterVpa.textContent = state.vpa || 'merchant@upi';
+  const sym = getCurrencySymbol(state.currency);
   
   const numAmt = parseFloat(state.amount);
   if (!isNaN(numAmt) && numAmt > 0) {
     elements.posterAmountContainer.style.display = 'block';
-    elements.posterAmountVal.textContent = `₹ ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    elements.posterAmountVal.textContent = `${sym} ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
   } else {
     elements.posterAmountContainer.style.display = 'none';
   }
@@ -649,7 +764,7 @@ async function openPrintModal() {
 
     for (let i = 0; i < state.parts.length; i++) {
       const part = state.parts[i];
-      const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note);
+      const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note, part.refId, state.currency);
       
       const partCard = document.createElement('div');
       partCard.className = 'poster-part-card';
@@ -660,7 +775,7 @@ async function openPrintModal() {
       
       const amtText = document.createElement('div');
       amtText.className = 'poster-part-amt';
-      amtText.textContent = `₹ ${part.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      amtText.textContent = `${sym} ${part.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
       
       const qrBox = document.createElement('div');
       qrBox.className = 'poster-qr-container';
@@ -674,7 +789,7 @@ async function openPrintModal() {
   } else {
     elements.posterSingleQrView.classList.remove('hidden');
     elements.posterMultiQrView.classList.add('hidden');
-    const upiUrl = buildUpiUrl(state.vpa, state.payeeName, state.amount, state.note);
+    const upiUrl = buildUpiUrl(state.vpa, state.payeeName, state.amount, state.note, state.refId, state.currency);
     await renderQrCode(elements.posterQrOutput, upiUrl, '#000000', 260);
   }
 

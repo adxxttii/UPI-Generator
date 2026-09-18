@@ -94,43 +94,69 @@
               </div>
             </div>
 
-            <!-- Amount -->
-            <div class="form-group">
-              <label for="amount">
-                Amount (₹ INR)
-                <span class="optional-tag">Auto-splits if &gt; ₹2,000</span>
-              </label>
-              <div class="input-wrapper amount-wrapper">
-                <span class="currency-symbol">₹</span>
-                <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" max="100000" autocomplete="off">
+            <!-- Amount & Currency Row -->
+            <div class="form-row">
+              <div class="form-group half">
+                <label for="amount">
+                  Amount <span class="optional-tag">Auto-splits if &gt; ₹2,000</span>
+                </label>
+                <div class="input-wrapper amount-wrapper">
+                  <span class="currency-symbol" id="currencySymbolDisplay">₹</span>
+                  <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" max="100000" autocomplete="off">
+                </div>
               </div>
+              <div class="form-group half">
+                <label for="currencySelect">Currency (cu)</label>
+                <div class="input-wrapper">
+                  <select id="currencySelect">
+                    <option value="INR" selected>INR (₹ Indian Rupee)</option>
+                    <option value="USD">USD ($ US Dollar)</option>
+                    <option value="EUR">EUR (€ Euro)</option>
+                    <option value="GBP">GBP (£ British Pound)</option>
+                    <option value="AED">AED (د.إ UAE Dirham)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-              <!-- Quick Presets -->
-              <div class="preset-chips">
-                <span class="preset-label">Quick:</span>
-                <button type="button" class="chip" data-amount="500">₹500</button>
-                <button type="button" class="chip" data-amount="1999">₹1,999</button>
-                <button type="button" class="chip" data-amount="3000">₹3,000</button>
-                <button type="button" class="chip" data-amount="5000">₹5,000</button>
-                <button type="button" class="chip" data-amount="10000">₹10,000</button>
-                <button type="button" class="chip chip-clear" id="clearAmountBtn">Clear</button>
-              </div>
+            <!-- Quick Presets -->
+            <div class="preset-chips">
+              <span class="preset-label">Quick:</span>
+              <button type="button" class="chip" data-amount="500">₹500</button>
+              <button type="button" class="chip" data-amount="1999">₹1,999</button>
+              <button type="button" class="chip" data-amount="3000">₹3,000</button>
+              <button type="button" class="chip" data-amount="5000">₹5,000</button>
+              <button type="button" class="chip" data-amount="10000">₹10,000</button>
+              <button type="button" class="chip chip-clear" id="clearAmountBtn">Clear</button>
             </div>
 
             <!-- Transaction Remark / Note -->
             <div class="form-group">
               <label for="txnNote">
-                Transaction Note / Remarks
+                Transaction Note / Remarks (tn)
               </label>
               <div class="input-wrapper">
                 <input type="text" id="txnNote" placeholder="e.g. Order #4092 or Services" maxlength="50" autocomplete="off">
               </div>
             </div>
 
+            <!-- Transaction Reference ID (tr) -->
+            <div class="form-group">
+              <label for="refId">
+                Transaction Reference ID (tr)
+                <span class="tooltip-icon" title="Unique order/transaction ID for tracking payments">ℹ️</span>
+              </label>
+              <div class="input-wrapper input-with-action">
+                <input type="text" id="refId" placeholder="e.g. TXN987654321" maxlength="35" autocomplete="off">
+                <button type="button" id="generateRefBtn" class="input-action-btn" title="Generate random reference ID">🎲 Auto ID</button>
+              </div>
+              <span class="input-hint">NPCI standard reference ID parameter (`tr`)</span>
+            </div>
+
             <!-- Customization Accordion -->
             <details class="customization-accordion">
               <summary class="accordion-header">
-                <span>🎨 Customize QR Styling & Options</span>
+                <span>🎨 Customize QR Styling & Size Options</span>
                 <span class="chevron">▼</span>
               </summary>
               <div class="accordion-content">
@@ -146,22 +172,28 @@
                   </div>
                 </div>
 
-                <div class="form-row">
-                  <div class="form-group half">
-                    <label for="qrSize">QR Quality / Size</label>
-                    <select id="qrSize">
-                      <option value="250">Standard (250px)</option>
-                      <option value="350" selected>High (350px)</option>
-                      <option value="500">Ultra Print (500px)</option>
-                    </select>
+                <div class="form-group">
+                  <div class="label-with-value">
+                    <label for="customQrSlider">Custom QR Size (px):</label>
+                    <span id="qrSizeValDisplay" class="size-val-badge">350 px</span>
                   </div>
-                  <div class="form-group half">
-                    <label for="showCenterLogo">UPI Logo Badge</label>
-                    <div class="toggle-switch-wrapper">
-                      <input type="checkbox" id="showCenterLogo" checked>
-                      <label for="showCenterLogo" class="toggle-slider"></label>
-                      <span class="toggle-text">Show Center Logo</span>
+                  <div class="slider-preset-wrapper">
+                    <input type="range" id="customQrSlider" min="150" max="800" step="25" value="350" class="qr-slider">
+                    <div class="slider-presets">
+                      <button type="button" class="size-chip" data-size="200">200px</button>
+                      <button type="button" class="size-chip active" data-size="350">350px</button>
+                      <button type="button" class="size-chip" data-size="500">500px (Print)</button>
+                      <button type="button" class="size-chip" data-size="800">800px (HD)</button>
                     </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="showCenterLogo">UPI Logo Badge</label>
+                  <div class="toggle-switch-wrapper">
+                    <input type="checkbox" id="showCenterLogo" checked>
+                    <label for="showCenterLogo" class="toggle-slider"></label>
+                    <span class="toggle-text">Show Center Logo</span>
                   </div>
                 </div>
               </div>
@@ -255,13 +287,13 @@
                 </button>
               </div>
               <button id="shareWebBtn" class="btn btn-ghost btn-full">
-                <span>📱</span> Share Payment Link
+                <span>📱</span> Share QR Code / Payment Link
               </button>
             </div>
 
             <!-- Direct App Launchers -->
             <div class="app-launchers">
-              <span class="launchers-title">Pay directly via App:</span>
+              <span class="launchers-title">Pay directly via Installed App:</span>
               <div class="app-buttons-grid">
                 <a id="gpayBtn" class="app-btn gpay" target="_blank" rel="noopener">
                   <span class="app-icon">🔵</span> GPay
@@ -277,6 +309,12 @@
                 </a>
                 <a id="credBtn" class="app-btn cred" target="_blank" rel="noopener">
                   <span class="app-icon">⚫</span> Cred
+                </a>
+                <a id="amazonpayBtn" class="app-btn amazonpay" target="_blank" rel="noopener">
+                  <span class="app-icon">🟠</span> Amazon Pay
+                </a>
+                <a id="whatsappBtn" class="app-btn whatsapp" target="_blank" rel="noopener">
+                  <span class="app-icon">🟢</span> WhatsApp
                 </a>
               </div>
             </div>
