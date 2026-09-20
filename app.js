@@ -1,4 +1,15 @@
 import QRCode from 'qrcode';
+import {
+  listenAuthState,
+  loginWithGoogle,
+  loginWithEmail,
+  registerWithEmail,
+  loginAsGuest,
+  logoutUser,
+  getFirebaseConfig,
+  saveFirebaseConfig,
+  resetFirebaseConfig
+} from './auth.js';
 
 // State Management
 const state = {
@@ -105,6 +116,65 @@ const elements = {
   
   // Toast
   toastContainer: document.getElementById('toastContainer'),
+
+  // Top Level View Containers
+  authLandingView: document.getElementById('authLandingView'),
+  appMainWorkspace: document.getElementById('appMainWorkspace'),
+
+  // Auth Landing Page Form Elements
+  landingGoogleSignInBtn: document.getElementById('landingGoogleSignInBtn'),
+  landingSignInForm: document.getElementById('landingSignInForm'),
+  landingLoginEmail: document.getElementById('landingLoginEmail'),
+  landingLoginPassword: document.getElementById('landingLoginPassword'),
+  landingSubmitLoginBtn: document.getElementById('landingSubmitLoginBtn'),
+  landingGuestLoginBtn: document.getElementById('landingGuestLoginBtn'),
+
+  landingSignUpForm: document.getElementById('landingSignUpForm'),
+  landingRegisterName: document.getElementById('landingRegisterName'),
+  landingRegisterEmail: document.getElementById('landingRegisterEmail'),
+  landingRegisterPassword: document.getElementById('landingRegisterPassword'),
+  landingSubmitRegisterBtn: document.getElementById('landingSubmitRegisterBtn'),
+
+  landingFirebaseConfigForm: document.getElementById('landingFirebaseConfigForm'),
+  landingCfgApiKey: document.getElementById('landingCfgApiKey'),
+  landingCfgProjectId: document.getElementById('landingCfgProjectId'),
+  landingSaveConfigBtn: document.getElementById('landingSaveConfigBtn'),
+  landingResetConfigBtn: document.getElementById('landingResetConfigBtn'),
+
+  // Firebase Auth Elements
+  openAuthModalBtn: document.getElementById('openAuthModalBtn'),
+  userProfileMenu: document.getElementById('userProfileMenu'),
+  userAvatarBtn: document.getElementById('userAvatarBtn'),
+  userAvatarImg: document.getElementById('userAvatarImg'),
+  userAvatarInitials: document.getElementById('userAvatarInitials'),
+  userDropdownCard: document.getElementById('userDropdownCard'),
+  dropdownUserName: document.getElementById('dropdownUserName'),
+  dropdownUserEmail: document.getElementById('dropdownUserEmail'),
+  dropdownConfigBtn: document.getElementById('dropdownConfigBtn'),
+  dropdownLogoutBtn: document.getElementById('dropdownLogoutBtn'),
+
+  authModal: document.getElementById('authModal'),
+  closeAuthModal: document.getElementById('closeAuthModal'),
+  googleSignInBtn: document.getElementById('googleSignInBtn'),
+  signInForm: document.getElementById('signInForm'),
+  loginEmail: document.getElementById('loginEmail'),
+  loginPassword: document.getElementById('loginPassword'),
+  submitLoginBtn: document.getElementById('submitLoginBtn'),
+  guestLoginBtn: document.getElementById('guestLoginBtn'),
+
+  signUpForm: document.getElementById('signUpForm'),
+  registerName: document.getElementById('registerName'),
+  registerEmail: document.getElementById('registerEmail'),
+  registerPassword: document.getElementById('registerPassword'),
+  submitRegisterBtn: document.getElementById('submitRegisterBtn'),
+
+  firebaseConfigForm: document.getElementById('firebaseConfigForm'),
+  cfgApiKey: document.getElementById('cfgApiKey'),
+  cfgProjectId: document.getElementById('cfgProjectId'),
+  cfgAuthDomain: document.getElementById('cfgAuthDomain'),
+  cfgAppId: document.getElementById('cfgAppId'),
+  saveConfigBtn: document.getElementById('saveConfigBtn'),
+  resetConfigBtn: document.getElementById('resetConfigBtn'),
 
   // App Mode Switcher & Stepper
   modeQrStudioBtn: document.getElementById('modeQrStudioBtn'),
@@ -991,12 +1061,248 @@ function setupCalculatorEvents() {
 }
 
 // Initialize Application
+function initAuth() {
+  // Modal toggle handlers
+  if (elements.openAuthModalBtn) {
+    elements.openAuthModalBtn.addEventListener('click', () => {
+      if (elements.authModal) elements.authModal.classList.remove('hidden');
+    });
+  }
+
+  if (elements.closeAuthModal) {
+    elements.closeAuthModal.addEventListener('click', () => {
+      if (elements.authModal) elements.authModal.classList.add('hidden');
+    });
+  }
+
+  // Close modal when clicking backdrop
+  if (elements.authModal) {
+    elements.authModal.addEventListener('click', (e) => {
+      if (e.target === elements.authModal) {
+        elements.authModal.classList.add('hidden');
+      }
+    });
+  }
+
+  // Toggle User Avatar Dropdown
+  if (elements.userAvatarBtn && elements.userDropdownCard) {
+    elements.userAvatarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      elements.userDropdownCard.classList.toggle('hidden');
+    });
+    
+    document.addEventListener('click', () => {
+      if (elements.userDropdownCard) elements.userDropdownCard.classList.add('hidden');
+    });
+
+    elements.userDropdownCard.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  // Auth Tabs switching (Works for both Modal & Landing Page tabs)
+  const authTabs = document.querySelectorAll('.auth-tab');
+  authTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTabId = tab.getAttribute('data-tab');
+      // Scope active class toggle to sister tabs within the same container
+      const parentTabs = tab.parentElement;
+      if (parentTabs) {
+        parentTabs.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      }
+      tab.classList.add('active');
+
+      const parentBody = tab.closest('.modal-card, .auth-form-card');
+      if (parentBody) {
+        parentBody.querySelectorAll('.auth-tab-content').forEach(c => c.classList.add('hidden'));
+        const targetContent = parentBody.querySelector(`#${targetTabId}`);
+        if (targetContent) targetContent.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Google Sign-In Handler
+  const handleGoogleSignIn = async () => {
+    const res = await loginWithGoogle();
+    if (res.success) {
+      showToast(`Welcome ${res.user.displayName || 'User'}!`, '🔥');
+      if (elements.authModal) elements.authModal.classList.add('hidden');
+    } else {
+      showToast(res.error, '⚠️');
+    }
+  };
+
+  if (elements.googleSignInBtn) elements.googleSignInBtn.addEventListener('click', handleGoogleSignIn);
+  if (elements.landingGoogleSignInBtn) elements.landingGoogleSignInBtn.addEventListener('click', handleGoogleSignIn);
+
+  // Email Sign-In Handlers
+  const handleEmailSignIn = async (email, password, formToReset) => {
+    const res = await loginWithEmail(email, password);
+    if (res.success) {
+      showToast('Signed in successfully!', '✅');
+      if (elements.authModal) elements.authModal.classList.add('hidden');
+      if (formToReset) formToReset.reset();
+    } else {
+      showToast(res.error, '⚠️');
+    }
+  };
+
+  if (elements.signInForm) {
+    elements.signInForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleEmailSignIn(elements.loginEmail.value, elements.loginPassword.value, elements.signInForm);
+    });
+  }
+  if (elements.landingSignInForm) {
+    elements.landingSignInForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleEmailSignIn(elements.landingLoginEmail.value, elements.landingLoginPassword.value, elements.landingSignInForm);
+    });
+  }
+
+  // Registration Handlers
+  const handleRegister = async (name, email, password, formToReset) => {
+    const res = await registerWithEmail(email, password, name);
+    if (res.success) {
+      showToast('Account created successfully!', '🎉');
+      if (elements.authModal) elements.authModal.classList.add('hidden');
+      if (formToReset) formToReset.reset();
+    } else {
+      showToast(res.error, '⚠️');
+    }
+  };
+
+  if (elements.signUpForm) {
+    elements.signUpForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleRegister(elements.registerName.value, elements.registerEmail.value, elements.registerPassword.value, elements.signUpForm);
+    });
+  }
+  if (elements.landingSignUpForm) {
+    elements.landingSignUpForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleRegister(elements.landingRegisterName.value, elements.landingRegisterEmail.value, elements.landingRegisterPassword.value, elements.landingSignUpForm);
+    });
+  }
+
+  // Guest Login Handler
+  const handleGuestLogin = async () => {
+    const res = await loginAsGuest();
+    if (res.success) {
+      showToast('Welcome to UPI PayFlow Studio', '👤');
+      if (elements.authModal) elements.authModal.classList.add('hidden');
+    } else {
+      showToast(res.error, '⚠️');
+    }
+  };
+
+  if (elements.guestLoginBtn) elements.guestLoginBtn.addEventListener('click', handleGuestLogin);
+  if (elements.landingGuestLoginBtn) elements.landingGuestLoginBtn.addEventListener('click', handleGuestLogin);
+
+  // Logout Handler
+  if (elements.dropdownLogoutBtn) {
+    elements.dropdownLogoutBtn.addEventListener('click', async () => {
+      await logoutUser();
+      if (elements.userDropdownCard) elements.userDropdownCard.classList.add('hidden');
+      showToast('Signed out. Please sign in to access studio.', '🚪');
+    });
+  }
+
+  // Dropdown -> Firebase Config Settings
+  if (elements.dropdownConfigBtn) {
+    elements.dropdownConfigBtn.addEventListener('click', () => {
+      if (elements.userDropdownCard) elements.userDropdownCard.classList.add('hidden');
+      if (elements.authModal) elements.authModal.classList.remove('hidden');
+      const configTab = document.querySelector('.auth-tab[data-tab="tabFirebaseConfig"]');
+      if (configTab) configTab.click();
+    });
+  }
+
+  // Firebase Config Forms
+  if (elements.firebaseConfigForm) {
+    const cfg = getFirebaseConfig();
+    if (elements.cfgApiKey) elements.cfgApiKey.value = cfg.apiKey || '';
+    if (elements.cfgProjectId) elements.cfgProjectId.value = cfg.projectId || '';
+    if (elements.cfgAuthDomain) elements.cfgAuthDomain.value = cfg.authDomain || '';
+    if (elements.cfgAppId) elements.cfgAppId.value = cfg.appId || '';
+
+    elements.firebaseConfigForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        saveFirebaseConfig({
+          apiKey: elements.cfgApiKey.value,
+          projectId: elements.cfgProjectId.value,
+          authDomain: elements.cfgAuthDomain.value,
+          appId: elements.cfgAppId.value
+        });
+        showToast('Custom Firebase Config saved!', '⚙️');
+        if (elements.authModal) elements.authModal.classList.add('hidden');
+      } catch (err) {
+        showToast(err.message, '⚠️');
+      }
+    });
+
+    if (elements.resetConfigBtn) {
+      elements.resetConfigBtn.addEventListener('click', () => {
+        resetFirebaseConfig();
+        const def = getFirebaseConfig();
+        elements.cfgApiKey.value = def.apiKey;
+        elements.cfgProjectId.value = def.projectId;
+        elements.cfgAuthDomain.value = def.authDomain;
+        elements.cfgAppId.value = def.appId;
+        showToast('Reverted to default Firebase config', '🔄');
+      });
+    }
+  }
+
+  // Listen to Auth State changes
+  listenAuthState((user) => {
+    updateAuthUI(user);
+  });
+}
+
+function updateAuthUI(user) {
+  if (user) {
+    // User is logged in -> Hide Auth Landing View & Show Main App Workspace
+    if (elements.authLandingView) elements.authLandingView.classList.add('hidden');
+    if (elements.appMainWorkspace) elements.appMainWorkspace.classList.remove('hidden');
+
+    if (elements.openAuthModalBtn) elements.openAuthModalBtn.classList.add('hidden');
+    if (elements.userProfileMenu) elements.userProfileMenu.classList.remove('hidden');
+
+    const name = user.displayName || (user.isAnonymous ? 'Guest User' : user.email?.split('@')[0]) || 'Merchant User';
+    const email = user.email || (user.isAnonymous ? 'Anonymous Auth Session' : '');
+    const photo = user.photoURL;
+
+    if (elements.dropdownUserName) elements.dropdownUserName.textContent = name;
+    if (elements.dropdownUserEmail) elements.dropdownUserEmail.textContent = email;
+
+    if (photo && elements.userAvatarImg) {
+      elements.userAvatarImg.src = photo;
+      elements.userAvatarImg.classList.remove('hidden');
+      if (elements.userAvatarInitials) elements.userAvatarInitials.classList.add('hidden');
+    } else if (elements.userAvatarInitials) {
+      elements.userAvatarInitials.textContent = name.charAt(0).toUpperCase();
+      elements.userAvatarInitials.classList.remove('hidden');
+      if (elements.userAvatarImg) elements.userAvatarImg.classList.add('hidden');
+    }
+  } else {
+    // User is logged out -> Show Auth Landing View & Hide Main App Workspace
+    if (elements.authLandingView) elements.authLandingView.classList.remove('hidden');
+    if (elements.appMainWorkspace) elements.appMainWorkspace.classList.add('hidden');
+
+    if (elements.openAuthModalBtn) elements.openAuthModalBtn.classList.remove('hidden');
+    if (elements.userProfileMenu) elements.userProfileMenu.classList.add('hidden');
+  }
+}
+
 function init() {
   setupThemeToggle();
   setupPresetChips();
   setupCustomization();
   setupLiveValidation();
   setupCalculatorEvents();
+  initAuth();
 
   // Mode Switcher Event Listeners
   if (elements.modeQrStudioBtn && elements.modeCalcBtn) {
