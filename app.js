@@ -179,8 +179,35 @@ const elements = {
   // App Mode Switcher & Stepper
   modeQrStudioBtn: document.getElementById('modeQrStudioBtn'),
   modeCalcBtn: document.getElementById('modeCalcBtn'),
+  modeProfileBtn: document.getElementById('modeProfileBtn'),
+  dropdownViewProfileBtn: document.getElementById('dropdownViewProfileBtn'),
   qrStepperContainer: document.getElementById('qrStepperContainer'),
   calcView: document.getElementById('calcView'),
+  profileView: document.getElementById('profileView'),
+
+  // Profile View Identity & Settings
+  profileAvatarImg: document.getElementById('profileAvatarImg'),
+  profileAvatarInitials: document.getElementById('profileAvatarInitials'),
+  profileDisplayName: document.getElementById('profileDisplayName'),
+  profileEmail: document.getElementById('profileEmail'),
+  profileAuthBadge: document.getElementById('profileAuthBadge'),
+  profileAuthType: document.getElementById('profileAuthType'),
+  profileUid: document.getElementById('profileUid'),
+
+  profileSettingsForm: document.getElementById('profileSettingsForm'),
+  profileDefaultVpa: document.getElementById('profileDefaultVpa'),
+  profileDefaultName: document.getElementById('profileDefaultName'),
+  profileDefaultCurrency: document.getElementById('profileDefaultCurrency'),
+  profileAutofillToggle: document.getElementById('profileAutofillToggle'),
+  saveProfileSettingsBtn: document.getElementById('saveProfileSettingsBtn'),
+
+  // Profile History Stats & List
+  statTotalQrs: document.getElementById('statTotalQrs'),
+  statTotalAmount: document.getElementById('statTotalAmount'),
+  statAvgAmount: document.getElementById('statAvgAmount'),
+  profileHistorySearch: document.getElementById('profileHistorySearch'),
+  profileHistoryList: document.getElementById('profileHistoryList'),
+  profileClearHistoryBtn: document.getElementById('profileClearHistoryBtn'),
 
   // Calculator Form Elements
   calcForm: document.getElementById('calcForm'),
@@ -926,33 +953,157 @@ function setupLiveValidation() {
   });
 }
 
-// Switch App Mode (QR Studio vs Charge Calculator)
+// Switch App Mode (QR Studio vs Charge Calculator vs Profile)
 function switchAppMode(mode = 'qr') {
+  elements.modeQrStudioBtn.classList.remove('active');
+  elements.modeCalcBtn.classList.remove('active');
+  if (elements.modeProfileBtn) elements.modeProfileBtn.classList.remove('active');
+
+  elements.qrStepperContainer.classList.add('hidden');
+  elements.step1View.classList.add('hidden');
+  elements.step2View.classList.add('hidden');
+  elements.calcView.classList.add('hidden');
+  if (elements.profileView) elements.profileView.classList.add('hidden');
+
   if (mode === 'calc') {
-    elements.modeQrStudioBtn.classList.remove('active');
     elements.modeCalcBtn.classList.add('active');
-    
-    elements.qrStepperContainer.classList.add('hidden');
-    elements.step1View.classList.add('hidden');
-    elements.step2View.classList.add('hidden');
     elements.calcView.classList.remove('hidden');
-
     updateCalculatorDisplay();
+  } else if (mode === 'profile') {
+    if (elements.modeProfileBtn) elements.modeProfileBtn.classList.add('active');
+    if (elements.profileView) elements.profileView.classList.remove('hidden');
+    renderProfileViewData();
   } else {
-    elements.modeCalcBtn.classList.remove('active');
     elements.modeQrStudioBtn.classList.add('active');
-
     elements.qrStepperContainer.classList.remove('hidden');
-    elements.calcView.classList.add('hidden');
     
     if (state.currentStep === 2) {
-      elements.step1View.classList.add('hidden');
       elements.step2View.classList.remove('hidden');
     } else {
       elements.step1View.classList.remove('hidden');
-      elements.step2View.classList.add('hidden');
     }
   }
+}
+
+// User Profile Preferences Storage
+const PROFILE_SETTINGS_KEY = 'upi_payflow_user_profile_settings';
+
+function getSavedProfileSettings() {
+  try {
+    const saved = localStorage.getItem(PROFILE_SETTINGS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (err) {
+    console.warn('Error reading profile settings:', err);
+  }
+  return {
+    vpa: '',
+    name: '',
+    currency: 'INR',
+    autofill: true
+  };
+}
+
+function saveProfileSettings(settings) {
+  localStorage.setItem(PROFILE_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function renderProfileViewData() {
+  const currentUser = getCurrentUser();
+  
+  // User Identity Info
+  const name = currentUser?.displayName || (currentUser?.isAnonymous ? 'Guest User' : currentUser?.email?.split('@')[0]) || 'Merchant User';
+  const email = currentUser?.email || (currentUser?.isAnonymous ? 'Anonymous Auth Session' : 'Local User Session');
+  const photo = currentUser?.photoURL;
+  const uid = currentUser?.uid || 'guest-local-session';
+  const authType = currentUser?.providerData?.[0]?.providerId === 'google.com' ? 'Google OAuth 2.0' :
+                   currentUser?.isAnonymous ? 'Guest Mode' : 'Email/Password Auth';
+
+  if (elements.profileDisplayName) elements.profileDisplayName.textContent = name;
+  if (elements.profileEmail) elements.profileEmail.textContent = email;
+  if (elements.profileAuthType) elements.profileAuthType.textContent = authType;
+  if (elements.profileUid) elements.profileUid.textContent = uid.substring(0, 16) + '...';
+
+  if (photo && elements.profileAvatarImg) {
+    elements.profileAvatarImg.src = photo;
+    elements.profileAvatarImg.classList.remove('hidden');
+    if (elements.profileAvatarInitials) elements.profileAvatarInitials.classList.add('hidden');
+  } else if (elements.profileAvatarInitials) {
+    elements.profileAvatarInitials.textContent = name.charAt(0).toUpperCase();
+    elements.profileAvatarInitials.classList.remove('hidden');
+    if (elements.profileAvatarImg) elements.profileAvatarImg.classList.add('hidden');
+  }
+
+  // Populate Default Settings Form
+  const savedSettings = getSavedProfileSettings();
+  if (elements.profileDefaultVpa) elements.profileDefaultVpa.value = savedSettings.vpa || '';
+  if (elements.profileDefaultName) elements.profileDefaultName.value = savedSettings.name || '';
+  if (elements.profileDefaultCurrency) elements.profileDefaultCurrency.value = savedSettings.currency || 'INR';
+  if (elements.profileAutofillToggle) elements.profileAutofillToggle.checked = savedSettings.autofill !== false;
+
+  // Render History & Analytics Stats
+  renderProfileHistory();
+}
+
+function renderProfileHistory(filterQuery = '') {
+  const history = getHistory();
+  
+  // Compute analytics
+  const totalQrs = history.length;
+  const totalAmount = history.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  const avgAmount = totalQrs > 0 ? totalAmount / totalQrs : 0;
+
+  const fmt = (val) => '₹ ' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  if (elements.statTotalQrs) elements.statTotalQrs.textContent = totalQrs;
+  if (elements.statTotalAmount) elements.statTotalAmount.textContent = fmt(totalAmount);
+  if (elements.statAvgAmount) elements.statAvgAmount.textContent = fmt(avgAmount);
+
+  // Filter history list
+  const query = filterQuery.toLowerCase().trim();
+  const filteredHistory = history.filter(item => {
+    if (!query) return true;
+    return (item.vpa || '').toLowerCase().includes(query) ||
+           (item.name || '').toLowerCase().includes(query) ||
+           (item.amount || '').toString().includes(query) ||
+           (item.refId || '').toLowerCase().includes(query);
+  });
+
+  if (!elements.profileHistoryList) return;
+
+  if (filteredHistory.length === 0) {
+    elements.profileHistoryList.innerHTML = `
+      <div class="history-empty">
+        ${query ? 'No matching payment records found.' : 'No payment QR history available yet.'}
+      </div>`;
+    return;
+  }
+
+  elements.profileHistoryList.innerHTML = filteredHistory.map((item) => `
+    <div class="profile-history-item">
+      <div class="profile-history-info">
+        <h4>${escapeHtml(item.name || 'Payee')}</h4>
+        <p>${escapeHtml(item.vpa)} • ${item.date || 'Recent'}</p>
+      </div>
+      <div class="profile-history-amount">
+        ₹ ${parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+      </div>
+      <div class="profile-history-actions">
+        <button type="button" class="btn btn-sm btn-secondary reuse-qr-btn" data-vpa="${escapeHtml(item.vpa)}" data-name="${escapeHtml(item.name)}" data-amount="${escapeHtml(item.amount || '')}" title="Re-use details in Studio">⚡ Use</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Re-use button handlers
+  elements.profileHistoryList.querySelectorAll('.reuse-qr-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      elements.upiId.value = btn.getAttribute('data-vpa');
+      elements.payeeName.value = btn.getAttribute('data-name');
+      elements.amount.value = btn.getAttribute('data-amount');
+      switchAppMode('qr');
+      goToStep(1);
+      showToast('Payment details loaded into Studio!', '⚡');
+    });
+  });
 }
 
 // UPI Charge & Interchange Fee Calculator Engine
@@ -1305,16 +1456,72 @@ function init() {
   initAuth();
 
   // Mode Switcher Event Listeners
-  if (elements.modeQrStudioBtn && elements.modeCalcBtn) {
-    elements.modeQrStudioBtn.addEventListener('click', () => switchAppMode('qr'));
-    elements.modeCalcBtn.addEventListener('click', () => switchAppMode('calc'));
+  if (elements.modeQrStudioBtn) elements.modeQrStudioBtn.addEventListener('click', () => switchAppMode('qr'));
+  if (elements.modeCalcBtn) elements.modeCalcBtn.addEventListener('click', () => switchAppMode('calc'));
+  if (elements.modeProfileBtn) elements.modeProfileBtn.addEventListener('click', () => switchAppMode('profile'));
+  
+  if (elements.dropdownViewProfileBtn) {
+    elements.dropdownViewProfileBtn.addEventListener('click', () => {
+      if (elements.userDropdownCard) elements.userDropdownCard.classList.add('hidden');
+      switchAppMode('profile');
+    });
   }
 
-  // Load Saved Profile if available
-  const saved = checkSavedProfile();
-  if (saved) {
-    elements.upiId.value = saved.vpa;
-    elements.payeeName.value = saved.name || '';
+  // Save Default UPI Settings Form Handler
+  if (elements.profileSettingsForm) {
+    elements.profileSettingsForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const vpa = elements.profileDefaultVpa ? elements.profileDefaultVpa.value.trim() : '';
+      const name = elements.profileDefaultName ? elements.profileDefaultName.value.trim() : '';
+      const currency = elements.profileDefaultCurrency ? elements.profileDefaultCurrency.value : 'INR';
+      const autofill = elements.profileAutofillToggle ? elements.profileAutofillToggle.checked : true;
+
+      saveProfileSettings({ vpa, name, currency, autofill });
+      showToast('Default UPI Settings saved successfully!', '💾');
+
+      if (autofill && vpa) {
+        elements.upiId.value = vpa;
+        if (name) elements.payeeName.value = name;
+        if (currency && elements.currencySelect) {
+          elements.currencySelect.value = currency;
+          if (elements.currencySymbolDisplay) {
+            const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency === 'AED' ? 'د.إ' : '₹';
+            elements.currencySymbolDisplay.textContent = sym;
+          }
+        }
+      }
+    });
+  }
+
+  // Profile History Search Event
+  if (elements.profileHistorySearch) {
+    elements.profileHistorySearch.addEventListener('input', (e) => {
+      renderProfileHistory(e.target.value);
+    });
+  }
+
+  // Profile Clear History Event
+  if (elements.profileClearHistoryBtn) {
+    elements.profileClearHistoryBtn.addEventListener('click', () => {
+      localStorage.removeItem('upi_payflow_history');
+      renderHistory();
+      renderProfileHistory();
+      showToast('Payment history cleared!', '🗑️');
+    });
+  }
+
+  // Load Saved Profile / Default UPI Settings if available
+  const savedMerchant = checkSavedProfile();
+  const savedSettings = getSavedProfileSettings();
+
+  if (savedSettings.autofill && savedSettings.vpa) {
+    elements.upiId.value = savedSettings.vpa;
+    elements.payeeName.value = savedSettings.name || 'PayFlow Merchant';
+    elements.amount.value = '3000';
+    elements.txnNote.value = 'Grocery Bill';
+  } else if (savedMerchant) {
+    elements.upiId.value = savedMerchant.vpa;
+    elements.payeeName.value = savedMerchant.name || '';
   } else {
     elements.upiId.value = 'demo@paytm';
     elements.payeeName.value = 'PayFlow Merchant';
@@ -1357,6 +1564,7 @@ function init() {
   elements.clearHistoryBtn.addEventListener('click', () => {
     localStorage.removeItem('upi_payflow_history');
     renderHistory();
+    renderProfileHistory();
     showToast('History cleared!', '🗑️');
   });
 

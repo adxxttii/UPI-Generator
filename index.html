@@ -203,6 +203,9 @@
                   <span id="authStatusBadge" class="auth-status-badge">🔥 Firebase Auth</span>
                 </div>
                 <div class="user-dropdown-divider"></div>
+                <button id="dropdownViewProfileBtn" class="dropdown-item">
+                  <span>👤</span> View Profile &amp; Settings
+                </button>
                 <button id="dropdownConfigBtn" class="dropdown-item">
                   <span>⚙️</span> Firebase Settings
                 </button>
@@ -228,6 +231,9 @@
       </button>
       <button id="modeCalcBtn" class="mode-tab">
         <span>🧮 UPI Charge Calculator</span>
+      </button>
+      <button id="modeProfileBtn" class="mode-tab">
+        <span>👤 User Profile &amp; History</span>
       </button>
     </nav>
 
@@ -652,6 +658,123 @@
                 <span>⚡ Generate QR Code for ₹<span id="useInQrAmtText">5,000</span></span>
                 <span>➔</span>
               </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- PAGE: USER PROFILE & HISTORY -->
+      <div id="profileView" class="step-view hidden">
+        <section class="profile-card-container">
+          <!-- User Profile Identity Card -->
+          <div class="profile-identity-card glass-panel highlight-glow">
+            <div class="profile-identity-header">
+              <div class="profile-avatar-wrapper">
+                <img id="profileAvatarImg" class="profile-avatar-img hidden" src="" alt="Profile Picture">
+                <span id="profileAvatarInitials" class="profile-avatar-initials">U</span>
+              </div>
+              <div class="profile-identity-info">
+                <div class="profile-name-row">
+                  <h2 id="profileDisplayName">Merchant User</h2>
+                  <span id="profileAuthBadge" class="auth-status-badge">🔥 Firebase Auth</span>
+                </div>
+                <p id="profileEmail" class="profile-email-text">user@example.com</p>
+                <div class="profile-meta-tags">
+                  <span class="meta-tag">Auth: <strong id="profileAuthType">Google Auth</strong></span>
+                  <span class="meta-tag">UID: <code id="profileUid">...</code></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid layout for Default UPI Settings & Stats -->
+          <div class="profile-grid-layout">
+            <!-- Left Card: Default Merchant & UPI Settings -->
+            <div class="profile-settings-card glass-panel">
+              <div class="card-header">
+                <h3>⚙️ Default UPI &amp; Merchant Settings</h3>
+                <p>Configure default payee credentials to auto-fill payment QR forms.</p>
+              </div>
+
+              <form id="profileSettingsForm" onsubmit="return false;">
+                <div class="form-group">
+                  <label for="profileDefaultVpa">Default Payee UPI ID (VPA)</label>
+                  <div class="input-wrapper">
+                    <input type="text" id="profileDefaultVpa" placeholder="e.g. merchant@okicici" autocomplete="off">
+                  </div>
+                  <span class="input-hint">Standard format: username@bank or mobile@paytm</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="profileDefaultName">Default Payee / Business Name</label>
+                  <div class="input-wrapper">
+                    <input type="text" id="profileDefaultName" placeholder="e.g. Sharma General Store" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="profileDefaultCurrency">Default Currency</label>
+                  <div class="input-wrapper">
+                    <select id="profileDefaultCurrency" class="select-input">
+                      <option value="INR" selected>INR (₹ Indian Rupee)</option>
+                      <option value="USD">USD ($ US Dollar)</option>
+                      <option value="EUR">EUR (€ Euro)</option>
+                      <option value="GBP">GBP (£ British Pound)</option>
+                      <option value="AED">AED (د.إ UAE Dirham)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <div class="toggle-switch-wrapper">
+                    <input type="checkbox" id="profileAutofillToggle" checked>
+                    <label for="profileAutofillToggle" class="toggle-slider"></label>
+                    <span class="toggle-text">Auto-fill form when creating new QRs</span>
+                  </div>
+                </div>
+
+                <button type="submit" id="saveProfileSettingsBtn" class="btn btn-primary btn-block">
+                  <span>💾 Save Default Settings</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Right Card: Transaction History Analytics -->
+            <div class="profile-stats-card glass-panel">
+              <div class="card-header">
+                <h3>📊 Payment Volume &amp; History Analytics</h3>
+                <p>Summary of generated QR payments in current session.</p>
+              </div>
+
+              <div class="stats-counter-grid">
+                <div class="stat-counter-box">
+                  <span class="stat-counter-value" id="statTotalQrs">0</span>
+                  <span class="stat-counter-label">QRs Generated</span>
+                </div>
+                <div class="stat-counter-box highlight-cyan">
+                  <span class="stat-counter-value" id="statTotalAmount">₹ 0.00</span>
+                  <span class="stat-counter-label">Total Volume</span>
+                </div>
+                <div class="stat-counter-box">
+                  <span class="stat-counter-value" id="statAvgAmount">₹ 0.00</span>
+                  <span class="stat-counter-label">Avg. QR Value</span>
+                </div>
+              </div>
+
+              <div class="history-search-wrapper">
+                <input type="text" id="profileHistorySearch" placeholder="🔍 Search history by payee, VPA, amount..." class="search-input">
+              </div>
+
+              <!-- Dedicated Profile History Log List -->
+              <div id="profileHistoryList" class="profile-history-list">
+                <!-- History transaction items inserted dynamically -->
+              </div>
+
+              <div class="profile-history-footer">
+                <button type="button" id="profileClearHistoryBtn" class="btn btn-ghost btn-sm">
+                  🗑️ Clear History
+                </button>
+              </div>
             </div>
           </div>
         </section>
