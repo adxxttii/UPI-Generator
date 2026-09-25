@@ -128,6 +128,8 @@ body {
 
 /* Header */
 .app-header {
+  position: relative;
+  z-index: 100;
   padding: 16px 24px;
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -243,6 +245,8 @@ body {
 /* Stepper Progress Bar */
 /* Mode Switcher Navigation Tabs */
 .app-mode-nav {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
   gap: 12px;
@@ -1760,9 +1764,15 @@ body {
   transform: translateY(-1px);
 }
 
+.auth-header-container {
+  position: relative;
+  z-index: 100;
+}
+
 /* User Avatar & Profile Dropdown */
 .user-profile-menu {
   position: relative;
+  z-index: 100;
 }
 
 .user-avatar-btn {
