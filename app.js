@@ -744,7 +744,28 @@ function renderHistory() {
 async function downloadSinglePartQr(partIndex = 0) {
   const part = state.parts[partIndex] || { partNum: 1, amount: state.amount, note: state.note, refId: state.refId };
   const upiUrl = buildUpiUrl(state.vpa, state.payeeName, part.amount, part.note, part.refId, state.currency);
-  
+  // Try SVG export first (vector), fallback to high-res PNG from canvas
+  try {
+    if (QRCode && QRCode.toString) {
+      const svgString = await QRCode.toString(upiUrl, { type: 'svg', color: { dark: state.color || '#000000', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const partSuffix = state.parts.length > 1 ? `_Part${part.partNum}of${state.parts.length}` : '';
+      link.download = `UPI_QR_${(state.payeeName || 'Payment').replace(/[^a-zA-Z0-9]/g, '_')}${partSuffix}_${part.amount}.svg`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast('Downloaded SVG QR Code', '📥');
+      playChimeSound('success');
+      return;
+    }
+  } catch (err) {
+    console.warn('SVG export failed, falling back to PNG', err);
+  }
+
   const tempContainer = document.createElement('div');
   const exportSize = Math.max(state.size, 500); // High res PNG download
   await renderQrCode(tempContainer, upiUrl, state.color, exportSize);
@@ -777,7 +798,9 @@ async function downloadSinglePartQr(partIndex = 0) {
     const partSuffix = state.parts.length > 1 ? `_Part${part.partNum}of${state.parts.length}` : '';
     link.download = `UPI_QR_${(state.payeeName || 'Payment').replace(/[^a-zA-Z0-9]/g, '_')}${partSuffix}_${part.amount}.png`;
     link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
     link.click();
+    link.remove();
 
     showToast(`Downloaded QR Code (${state.parts.length > 1 ? 'Part ' + part.partNum : 'PNG'})!`, '📥');
     playChimeSound('success');
