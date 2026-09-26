@@ -114,10 +114,10 @@ export function getCurrentUser() {
 }
 
 /**
- * Friendly Firebase Auth error formatter
+ * Friendly Auth error formatter
  */
 function formatAuthError(err) {
-  console.error('Firebase Auth Error:', err);
+  console.error('Auth Error:', err);
   if (!err) return 'Authentication failed.';
   const code = err.code || '';
   let msg = err.message || 'An error occurred during authentication.';

@@ -141,7 +141,7 @@ const elements = {
   landingSaveConfigBtn: document.getElementById('landingSaveConfigBtn'),
   landingResetConfigBtn: document.getElementById('landingResetConfigBtn'),
 
-  // Firebase Auth Elements
+  // Auth Elements
   openAuthModalBtn: document.getElementById('openAuthModalBtn'),
   userProfileMenu: document.getElementById('userProfileMenu'),
   userAvatarBtn: document.getElementById('userAvatarBtn'),

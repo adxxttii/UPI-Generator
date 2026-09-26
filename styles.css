@@ -1991,7 +1991,7 @@ body {
 }
 
 /* ==========================================================================
-   FIREBASE AUTHENTICATION & PROFILE DROPDOWN STYLES
+   AUTHENTICATION & PROFILE DROPDOWN STYLES
    ========================================================================== */
 
 .auth-header-container {
@@ -2075,7 +2075,11 @@ body {
   padding: 16px;
   border-radius: 16px;
   z-index: 1000;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  background: var(--bg-secondary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
   animation: dropdownIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

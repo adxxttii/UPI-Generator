@@ -53,7 +53,7 @@
             </div>
             <div class="feature-item">
               <span class="feature-icon">🔥</span>
-              <span>Firebase Cloud Auth &amp; Saved Profiles</span>
+              <span>Cloud Sync &amp; Saved Profiles</span>
             </div>
           </div>
         </div>
@@ -184,7 +184,7 @@
             <button id="clearProfileBtn" class="icon-btn-sm" title="Clear Saved Profile">✕</button>
           </div>
 
-          <!-- Firebase Auth Header Controls -->
+          <!-- Auth Header Controls -->
           <div id="authHeaderContainer" class="auth-header-container">
             <button id="openAuthModalBtn" class="btn btn-sm btn-auth">
               <span class="auth-btn-icon">🔥</span>
@@ -198,11 +198,11 @@
                 <span id="userAvatarInitials" class="user-avatar-initials">U</span>
               </button>
               
-              <div id="userDropdownCard" class="user-dropdown-card glass-panel hidden">
+              <div id="userDropdownCard" class="user-dropdown-card hidden">
                 <div class="user-dropdown-header">
                   <span id="dropdownUserName" class="user-name-text">Merchant User</span>
                   <span id="dropdownUserEmail" class="user-email-text">user@example.com</span>
-                  <span id="authStatusBadge" class="auth-status-badge">🔥 Firebase Auth</span>
+                  <span id="authStatusBadge" class="auth-status-badge">🔥 Authenticated</span>
                 </div>
                 <div class="user-dropdown-divider"></div>
                 <button id="dropdownViewProfileBtn" class="dropdown-item">
@@ -405,8 +405,8 @@
               <button type="button" id="saveMerchantBtn" class="btn btn-secondary">
                 <span class="btn-icon">💾</span> Save Merchant Profile
               </button>
-              <button type="button" id="resetFormBtn" class="btn btn-ghost">
-                Reset Form
+              <button type="button" id="resetFormBtn" class="btn btn-secondary">
+                <span class="btn-icon">🔄</span> Reset Form
               </button>
             </div>
           </form>
@@ -678,7 +678,7 @@
               <div class="profile-identity-info">
                 <div class="profile-name-row">
                   <h2 id="profileDisplayName">Merchant User</h2>
-                  <span id="profileAuthBadge" class="auth-status-badge">🔥 Firebase Auth</span>
+                  <span id="profileAuthBadge" class="auth-status-badge">🔥 Authenticated</span>
                 </div>
                 <p id="profileEmail" class="profile-email-text">user@example.com</p>
                 <div class="profile-meta-tags">
@@ -862,14 +862,14 @@
     </div>
   </div>
 
-  <!-- Firebase Auth Modal -->
+  <!-- Auth Modal -->
   <div id="authModal" class="modal-backdrop hidden">
     <div class="modal-card auth-modal-card glass-panel">
       <div class="modal-header">
         <div class="modal-title-wrapper">
           <span class="auth-icon">🔥</span>
           <div>
-            <h3>Firebase Authentication &amp; Cloud Sync</h3>
+            <h3>Authentication &amp; Cloud Sync</h3>
             <p class="modal-subtitle">Sign in to sync saved merchant profiles and QR templates across devices.</p>
           </div>
         </div>
