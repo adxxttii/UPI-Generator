@@ -190,7 +190,6 @@ const elements = {
   profileAvatarInitials: document.getElementById('profileAvatarInitials'),
   profileDisplayName: document.getElementById('profileDisplayName'),
   profileEmail: document.getElementById('profileEmail'),
-  profileAuthBadge: document.getElementById('profileAuthBadge'),
   profileAuthType: document.getElementById('profileAuthType'),
   profileUid: document.getElementById('profileUid'),
 
